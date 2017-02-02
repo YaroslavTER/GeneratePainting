@@ -2,13 +2,29 @@ var canvas = document.getElementById('canvasId')
 var ctx = canvas.getContext('2d')
 var height = canvas.clientHeight, width = canvas.clientWidth
 
-const TRANSPARENCY = 0.5
 const BRUSH_RADIUS = 25
 const GRAY_COEF = 71
+const MOVE_RADIUS = 5
+var time = 6
 
 var brushes = []
 var set = []
 var sets = []
+
+function Move() {
+    for(var brush of brushes) {
+        brush.x += brush.xMoveCoef
+        brush.y += brush.yMoveCoef
+        if(IsOutOfRange(brush.x))
+            brush.xMoveCoef = 0
+        if(IsOutOfRange(brush.y))
+            brush.yMoveCoef = 0
+    }
+}
+
+function IsOutOfRange(value) {
+    return value < -BRUSH_RADIUS*2 || value > width || value > width
+}
 
 function AddColor(inputRed, inputGreen, inputBlue){
     set.push({ red: inputRed, green: inputGreen, blue: inputBlue })
@@ -16,8 +32,8 @@ function AddColor(inputRed, inputGreen, inputBlue){
 
 function AddSet(inputSet) { sets.push(inputSet) }
 
-function AddBrushWithoutColor(inputX, inputY, inputMoveCoef) {
-    brushes.push({ x: inputX, y: inputY, moveCoef: inputMoveCoef,
+function AddBrushWithoutColor(inputX, inputY) {
+    brushes.push({ x: inputX, y: inputY, xMoveCoef: 0, yMoveCoef: 0,
                    red: GRAY_COEF, green: GRAY_COEF, blue: GRAY_COEF })
 }
 
@@ -30,10 +46,50 @@ function Draw() {
 function DrawBrush(inputBrush) {
     var circle = new Path2D()
     ctx.fillStyle = "rgb(" + inputBrush.red + ", " + inputBrush.green + ", "
-                                                   + inputBrush.blue  + ") "
+                                                   +  inputBrush.blue + ") "
+
     circle.arc(inputBrush.x + BRUSH_RADIUS, inputBrush.y + BRUSH_RADIUS,
                                             BRUSH_RADIUS, 0, 2 * Math.PI)
     ctx.fill(circle)
+}
+
+function SetColors() {
+    var generatedSet = sets[GetRandInRange(0, sets.length - 1)]
+    var brushIndex = 0
+    var brush
+    for(var color of generatedSet) {
+        if(brushIndex <= brushes.length - 1){
+            brush = brushes[brushIndex++]
+            brush.red = color.red
+            brush.green = color.green
+            brush.blue = color.blue
+        }
+    }
+}
+
+function GenerateMoveCoefs() {
+    var brush
+    for(var index = 0; index < brushes.length; index++) {
+        brush = brushes[index]
+        if(index == 0) {
+            SetMoveCoefs(brush, GetRandInRange(-MOVE_RADIUS, MOVE_RADIUS),
+                                GetRandInRange(1, MOVE_RADIUS))
+        } else if(index == 1) {
+            SetMoveCoefs(brush, GetRandInRange(-MOVE_RADIUS, -1),
+                                GetRandInRange(-MOVE_RADIUS, MOVE_RADIUS))
+        } else if(index == 2) {
+            SetMoveCoefs(brush, GetRandInRange(-MOVE_RADIUS, MOVE_RADIUS),
+                                GetRandInRange(-MOVE_RADIUS, -1))
+        } else if(index == 3) {
+            SetMoveCoefs(brush, GetRandInRange(1, MOVE_RADIUS),
+                                GetRandInRange(-MOVE_RADIUS, MOVE_RADIUS))
+        }
+    }
+}
+
+function SetMoveCoefs(brush, inputXCoef, inputYCoef) {
+    brush.xMoveCoef = inputXCoef
+    brush.yMoveCoef = inputYCoef
 }
 
 function GetRandInRange(min, max) {
@@ -61,14 +117,21 @@ AddColor(255, 0, 120)
 AddSet(set)
 set = []
 
-AddBrushWithoutColor(GetRandInRange(0, width - BRUSH_RADIUS*2), 0, 0 )
+AddBrushWithoutColor(GetRandInRange(0, width - BRUSH_RADIUS*2), -BRUSH_RADIUS*2)
 
-AddBrushWithoutColor(width - BRUSH_RADIUS*2,
-                     GetRandInRange(0, height - BRUSH_RADIUS*2), 0 )
+AddBrushWithoutColor(width, GetRandInRange(0, height - BRUSH_RADIUS*2))
 
-AddBrushWithoutColor(GetRandInRange(0, width - BRUSH_RADIUS*2),
-                     height - BRUSH_RADIUS*2, 0 )
+AddBrushWithoutColor(GetRandInRange(0, width - BRUSH_RADIUS*2), height)
 
-AddBrushWithoutColor(0, GetRandInRange(0, height - BRUSH_RADIUS*2), 0 )
+AddBrushWithoutColor(-BRUSH_RADIUS*2,
+                     GetRandInRange(0, height - BRUSH_RADIUS*2))
 
-Draw()
+SetColors()
+
+GenerateMoveCoefs()
+
+mainGameCycle = setInterval(function() {
+    Draw()
+    Move()
+    console.log('move')
+}, time)
